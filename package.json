@@ -1,0 +1,17 @@
+{
+  "name": "node-glome",
+  "version": "1.0.0",
+  "description": "Glome ",
+  "main": "glome.js",
+  "scripts": {
+    "test": "echo \"WTF\""
+  },
+  "keywords": [
+    "glome"
+  ],
+  "author": "Antti Tuomaala",
+  "license": "ISC",
+  "dependencies": {
+    "request": "^2.53.0"
+  }
+}
