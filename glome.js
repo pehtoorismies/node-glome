@@ -1,4 +1,23 @@
+
+
+var CONFIG = (function() {
+  var private = {
+    'LOCALSTORAGE_KEY': 'glomeidloc'
+  };
+  return {
+    get: function(name) { return private[name]; }
+  };
+})();
+
+
 var request = require('request');
+
+
+var configuration = {
+  "server" : "https://api.glome.me",
+
+
+};
 
 // Set the headers
 var headers = {
@@ -10,7 +29,8 @@ var CREATE_URL = "/users.json";
 var LOGIN_URL  = "/users/login.json";
 
 createGlomeId = function(appId, server, callback) {
-  console.log("createGlomeId " + appId['apiKey']);
+  //callback();
+  //console.log("createGlomeId " + appId['apiKey']);
   // Configure the request
   var options = {
       url: server + CREATE_URL,
@@ -29,12 +49,34 @@ createGlomeId = function(appId, server, callback) {
       // console.log("*****    RESPONSE: *****");
       // console.log(response);
       // console.log("***** // RESPONSE: *****");
-      if (!error && response.statusCode == 200) {
+      if (!error && response.statusCode == 201) {
           // Print out the response body
-          console.log(body);
-          callback(body);
+          console.log("SUCCESS callback");
+          //callback(error, );
+          //console.log(callback);
+          console.log("/SUCCESS");
+          //console.log(callback);
+          //callback(body);
+
       }
   });
+}
+
+getIdFromStorage = function getIdFromStorage(webLocalStorage, storageId) {
+  if (!webLocalStorage) {
+    return false;
+  }
+  var key = storageId || CONFIG.get('LOCALSTORAGE_KEY');
+
+  console.log(webLocalStorage);
+  console.log("KEY " + key);
+  var retVal = webLocalStorage.getItem(key);
+
+  return retVal
+
+}
+saveToStorage = function saveToStorage(glomeid, webLocalStorage) {
+
 }
 
 login = function(glomeid, server, callback) {
@@ -68,3 +110,5 @@ login = function(glomeid, server, callback) {
 
 module.exports.createGlomeId = createGlomeId;
 module.exports.login = login;
+module.exports.getIdFromStorage = getIdFromStorage;
+module.exports.saveToStorage = saveToStorage;
