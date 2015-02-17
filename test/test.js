@@ -35,78 +35,121 @@ test('test local storage', function (t) {
   t.equal(gid, glomeId, "Fetched glome id should match the stored with specified key name");
 
   // remove localstorage
-  nodeLocalStorage._deleteLocation()
-  t.end();
+  nodeLocalStorage._deleteLocation();
 
 });
 
-test('create glome id', function (t) {
-  t.plan(3);
+test('config changes', function (t) {
+  var storeValue = glome.config["server"];
 
+  t.plan(2);
+
+  t.ok(glome.config["server"].length > 5, "Config default server.");
+
+  glome.config["server"] = "myserver.com";
+  t.equal(glome.config.server,"myserver.com", "Changed config server.");
+
+  glome.config["server"] = storeValue;
+});
+
+test("Create glome id", function (t) {
   // Mock
-  var appId = {
-    'apiKey': '123',
-    'uid': 'a1.glome.me'
-  };
-  var scope = nock('https://api.glome.me')
-                  .post('/users.json', {'application[apikey]': appId['apiKey'], 'application[uid]': appId['uid'] })
+  var appId = {'apiKey': 'ads32','uid': 'a1.glome.me'};
+  var scope = nock(glome.config.server)
+                  .post(glome.config.url_create, {'application[apikey]': appId['apiKey'], 'application[uid]': appId['uid'] })
                   .replyWithFile(201, __dirname + '/create.json');
 
   glome.createId(appId).then(function (glomeId) {
     t.equal("12345", glomeId, "Glome id should match the one from create.json");
-  }).catch(function (err) {
-    t.fail("Should not come here");
-    t.end();
-  });
-
-
-  appId = {
-    'apiKey': 'wrong',
-    'uid': 'a1.glome.me'
-  };
-  glome.createId(appId).then(function (glomeId) {
-    t.fail("Should not come here");
     t.end();
   }).catch(function (err) {
-    t.pass("Wrong address ok");
-  });
-
-  // Mock
-  appId = {
-    'apiKey': '1233',
-    'uid': 'a1.glome.me'
-  };
-  scope = nock('https://api.glome.me')
-                  .post('/users.json', {'application[apikey]': appId['apiKey'], 'application[uid]': appId['uid'] })
-                  .replyWithFile(201, __dirname + '/broken.json');
-
-  glome.createId(appId).then(function (glomeId) {
-    t.fail("Should not come here, malformatted json");
-    t.end();
-  }).catch(function (err) {
-    t.pass("Malformatted json.");
+    t.end("Should compare 12345 to glomeid");
   });
 });
 
-test('login glome', function (t) {
-  t.plan(1);
-  
+
+test('Try to create glome id with wrong api key', function (t) {
+  var appId = {
+    'apiKey': 'wrong',
+    'uid': 'a1.glome.me'
+  };
+  var scope = nock(glome.config.server)
+                  .post(glome.config.url_create, {'application[apikey]': appId['apiKey'], 'application[uid]': appId['uid'] })
+                  .replyWithFile(403, __dirname + '/create_no_auth.json');
 
 
-}
+  glome.createId(appId).then(function (glomeId) {
+    t.end("Should fail");
 
-// test('create glome id', function (t) {
-//   t.plan(1);
+  }).catch(function (err) {
+    t.pass("Wrong credentials");
+    t.end();
+  });
+});
 
-//   var callback = function(error, glomeId) {
-//     t.ok(error, "Error should be null");
-//   }
+test("Create glome and return malformatted json", function (t) {
+
+  // Mock
+  var appId = {
+    'apiKey': '1233',
+    'uid': 'a1.glome.me'
+  };
+  scope = nock(glome.config.server)
+                  .post(glome.config.url_create, {'application[apikey]': appId['apiKey'], 'application[uid]': appId['uid'] })
+                  .replyWithFile(201, __dirname + '/broken.json');
+
+  glome.createId(appId).then(function (glomeId) {
+    t.end("Should not come here, malformatted json");
+  }).catch(function (err) {
+    t.pass("Malformatted json.");
+    t.end();
+  });
+});
+
+test('Test login with empty glome id', function (t) {
+
+  glome.login(null).then(function (glomeId) {
+    t.end("Login with null should fail");
+  }).catch(function (err) {
+    t.pass("Login with null");
+  });
+
+  glome.login("wrong_id").then(function (glomeId) {
+    t.end("Login with null should fail");
+  }).catch(function (err) {
+    t.pass("Login with null");
+    t.end();
+  });
+});
 
 
-//   glome.createGlomeId(appId, 'https://api.glome.me', callback);
-//   console.log(callback);
+test('Test login with wrong glome id', function (t) {
+
+  var wrongGlomeId = "wrongGlomeId";
+  scope = nock(glome.config.server)
+                  .post(glome.config.url_login, {'user[glomeid]': wrongGlomeId })
+                  .replyWithFile(403, __dirname + '/login_error.json');
+
+  glome.login(wrongGlomeId).then(function (res) {
+    t.end("Login should be denied, wrong id.");
+  }).catch(function (err) {
+    t.pass("Passed " + err);
+    t.end();
+  });
+});
 
 
-//   t.ok(callback.calledOnce, "Tjep");
+test('Test login with correct glome id', function (t) {
 
-// });
+  var glomeid = "123123";
+  scope = nock(glome.config.server)
+                  .post(glome.config.url_login, {'user[glomeid]': glomeid })
+                  .replyWithFile(200, __dirname + '/login_success.json');
+
+  glome.login(glomeid).then(function (res) {
+    t.pass("Login with proper glome id should pass");
+    t.end();
+  }).catch(function (err) {
+    t.end("Login with proper glome id should not fail");
+  });
+});

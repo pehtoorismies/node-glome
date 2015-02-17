@@ -1,0 +1,14 @@
+{
+  "id":3,
+  "glomeid":"12345",
+  "inwallet":"false",
+  "token":"some token",
+  "parentapp":
+  {
+    "title":"Glome Alpha Firefox addon",
+    "description":"Glome Alpha Firefox addon",
+    "uid":"ff.addon.glome.me"
+  },
+  "message":"Hello!",
+  "status":"ok"
+}
