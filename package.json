@@ -12,6 +12,7 @@
   "author": "Antti Tuomaala",
   "license": "ISC",
   "dependencies": {
+    "promise": "^6.1.0",
     "request": "^2.53.0"
   },
   "repository": {
