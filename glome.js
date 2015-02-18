@@ -1,5 +1,4 @@
 
-
 var DEFAULTS = (function() {
   var private = {
     'LOCALSTORAGE_KEY' : 'glomeidloc',
@@ -13,15 +12,15 @@ var DEFAULTS = (function() {
 })();
 
 var request = require('request'),
-    Promise = require('promise'),
+    Promise = require('es6-promise').Promise,
     config = {
       "server"     : DEFAULTS.get('SERVER'),
       "url_create" : DEFAULTS.get('URL_CREATE'),
       "url_login"  : DEFAULTS.get('URL_LOGIN')
     },
     headers = {
-      'User-Agent'  : 'Super Agent/0.0.1',
-      'Content-Type': 'application/json'
+      //'User-Agent'  : 'Super Agent/0.0.1',
+      'content-type': 'application/json'
     };
 
 // Create id
@@ -35,11 +34,14 @@ createId = function(appId) {
       method: 'POST',
       headers: headers,
       form: form,
-      withCredentials: false
+      withCredentials: false,
+      verbose: false
   }
 
   return new Promise(function(resolve, reject) {
     request(options, function (error, response, body) {
+      console.log(response.statusCode);
+      console.log(error);
       if (!error && response.statusCode == 201) {
         try {
           var result = JSON.parse(body);
@@ -84,18 +86,21 @@ login = function(glomeid) {
       method: 'POST',
       headers: headers,
       form: {'user[glomeid]': glomeid },
-      withCredentials: false
+      withCredentials: false,
+      verbose: false
   }
   return new Promise(function(resolve, reject) {
     // Start the request
     request(options, function (error, response, body) {
+      console.log("Request");
+
       if (error) {
+
         reject(error);
       } else if (response && response.statusCode == 200) {
         try {
-          console.log("Login");
           var result = JSON.parse(body);
-          result.glomeid ? result.glomeid : reject("Server error");
+          result.glomeid ? resolve(result.glomeid) : reject("Server error");
         } catch (e) {
           console.error("Malformed json:");
           console.error(body);
@@ -103,7 +108,6 @@ login = function(glomeid) {
         }
       } else {
         reject(body);
-
       }
     });
   });
