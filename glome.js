@@ -59,7 +59,7 @@ createId = function(appId) {
   });
 }
 
-getIdFromStorage = function getIdFromStorage(webLocalStorage, storageId) {
+getIdFromStorage = function (webLocalStorage, storageId) {
   if (!webLocalStorage) {
     return false;
   }
@@ -68,7 +68,7 @@ getIdFromStorage = function getIdFromStorage(webLocalStorage, storageId) {
   return webLocalStorage.getItem(key);
 }
 
-saveToStorage = function saveToStorage(glomeid, webLocalStorage, storageId) {
+saveToStorage = function (glomeid, webLocalStorage, storageId) {
   if (!webLocalStorage || !glomeid) {
     return false;
   }
@@ -92,8 +92,6 @@ login = function(glomeid) {
   return new Promise(function(resolve, reject) {
     // Start the request
     request(options, function (error, response, body) {
-      console.log("Request");
-
       if (error) {
 
         reject(error);
