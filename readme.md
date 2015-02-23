@@ -1,4 +1,4 @@
-# Local npm Modules
+# Glome node module
 
 ## Setup
 
