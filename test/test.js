@@ -17,20 +17,20 @@ test('test local storage', function (t) {
   glomeId = glome.getIdFromStorage(nodeLocalStorage);
   t.notOk(glomeId, "When localstorage has no key, no glome id found");
 
-  glomeId = glome.saveToStorage(gid, nodeLocalStorage);
+  glomeId = glome.saveIdToStorage(gid, nodeLocalStorage);
   t.notOk(glomeId, "When glome id is empty, cant save to localstorage");
 
   gid = "12341234-12341234";
-  glomeId = glome.saveToStorage(gid);
+  glomeId = glome.saveIdToStorage(gid);
   t.notOk(glomeId, "When localstorage is empty, cant save to glome id");
 
-  glomeId = glome.saveToStorage(gid, nodeLocalStorage);
+  glomeId = glome.saveIdToStorage(gid, nodeLocalStorage);
   t.ok(glomeId, "Should save glome id to local storage");
 
   glomeId = glome.getIdFromStorage(nodeLocalStorage);
   t.equal(gid, glomeId, "Fetched glome id should match the stored");
 
-  glome.saveToStorage(gid, nodeLocalStorage, "myKey");
+  glome.saveIdToStorage(gid, nodeLocalStorage, "myKey");
   glomeId = glome.getIdFromStorage(nodeLocalStorage, "myKey");
   t.equal(gid, glomeId, "Fetched glome id should match the stored with specified key name");
 
@@ -144,7 +144,10 @@ test('Test login with correct glome id', function (t) {
 
   scope = nock(glome.config.server)
                   .post(glome.config.url_login, {'user[glomeid]': glomeid })
-                  .replyWithFile(200, __dirname + '/login_success.json');
+                  .replyWithFile(200, __dirname + '/login_success.json', {
+                      'X-CSRF-Token' : 'FptMcTnZAwN6ydH9RYr08Kn37bmrXzOvmNrG9Oy+tI8=',
+                      'Set-Cookie': '_session_id=384be03b491fb88a64780c9388f2e0fc; path=/; expires=Wed, 04 Mar 2015 10:26:53 -0000; HttpOnly'
+                  });
 
   glome.login(glomeid).then(function (res) {
     t.pass("Login with proper glome id should pass");
