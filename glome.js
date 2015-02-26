@@ -26,22 +26,25 @@ var request = require('request'),
 // Create id
 createId = function(appId) {
   var url = config["server"].concat(config["url_create"]);
-  var form = { 'application[apikey]': appId['apiKey'],
-               'application[uid]': appId['uid'] };
+  var form;
+  if (appId) {
+    form = { 'application[apikey]': appId['apiKey'],
+             'application[uid]': appId['uid'] };
+  }
+
+
 
   var options = {
       url: url,
       method: 'POST',
       headers: headers,
       form: form,
-      withCredentials: true,
+      withCredentials: false,
       verbose: false
   }
 
   return new Promise(function(resolve, reject) {
     request(options, function (error, response, body) {
-      console.log(response.statusCode);
-      console.log(error);
       if (!error && response.statusCode == 201) {
         try {
           var result = JSON.parse(body);
@@ -86,7 +89,7 @@ login = function(glomeid) {
       method: 'POST',
       headers: headers,
       form: {'user[glomeid]': glomeid },
-      withCredentials: true,
+      withCredentials: false,
       verbose: false
   }
   return new Promise(function(resolve, reject) {

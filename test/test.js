@@ -106,6 +106,29 @@ test("Create glome and return malformatted json", function (t) {
   });
 });
 
+test("Create glomeid: No appKey, using proxy", function (t) {
+   var orgServer = glome.config.server;
+   glome.config.server = "http://glome.proxy";
+
+  scope = nock("http://glome.proxy")
+                  .post(glome.config.url_create)
+                  .replyWithFile(201, __dirname + '/create.json');
+
+
+  glome.createId().then(function (glomeId) {
+    console.log("GlomeID created: " + glomeId);
+    t.ok(glomeId, "Glome id is ok");
+    t.end()
+
+  }).catch(function (err) {
+    console.log(err);
+    t.end("Should use proxy");
+  });
+
+  glome.config.server = orgServer;
+
+});
+
 test('Test login with empty glome id', function (t) {
 
   glome.login(null).then(function (glomeId) {
@@ -121,7 +144,6 @@ test('Test login with empty glome id', function (t) {
     t.end();
   });
 });
-
 
 test('Test login with wrong glome id', function (t) {
 
