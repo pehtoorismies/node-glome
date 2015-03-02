@@ -59,14 +59,13 @@ test("Create glome id", function (t) {
                   .post(glome.config.url_create, {'application[apikey]': appId['apiKey'], 'application[uid]': appId['uid'] })
                   .replyWithFile(201, __dirname + '/create.json');
 
-  glome.createId(appId).then(function (glomeId) {
-    t.ok(glomeId.length > 30, "Glome id should match the one from create.json");
+  glome.createId(appId).then(function (result) {
+    t.ok(result.glomeid.length > 30, "Glome id should match the one from create.json");
     t.end();
   }).catch(function (err) {
     t.end("Should compare 12345 to glomeid: " + err);
   });
 });
-
 
 test('Try to create glome id with wrong api key', function (t) {
   var appId = {
@@ -162,19 +161,72 @@ test('Test login with wrong glome id', function (t) {
 
 
 test('Test login with correct glome id', function (t) {
-  var glomeid = "123123";
+  var glomeid = require('./login_success.json').glomeid;
 
   scope = nock(glome.config.server)
                   .post(glome.config.url_login, {'user[glomeid]': glomeid })
                   .replyWithFile(200, __dirname + '/login_success.json', {
-                      'X-CSRF-Token' : 'FptMcTnZAwN6ydH9RYr08Kn37bmrXzOvmNrG9Oy+tI8=',
-                      'Set-Cookie': '_session_id=384be03b491fb88a64780c9388f2e0fc; path=/; expires=Wed, 04 Mar 2015 10:26:53 -0000; HttpOnly'
+                      'X-CSRF-Token' : 'FptMcTnZAwN6ydH9RYr08Kn37bmrXzOvmNrG9Oy+tI8='
                   });
 
-  glome.login(glomeid).then(function (res) {
+  glome.login(glomeid).then(function (glomeId, x_csrf_token, auth_token, auth_token_exp) {
+    console.log("Glomemmmm");
+    console.log(glomeId);
     t.pass("Login with proper glome id should pass");
     t.end();
   }).catch(function (err) {
     t.end("Login with proper glome id should not fail");
   });
+});
+
+test('Test login with proxy', function (t) {
+  var glomeid = require('./login_success.json').glomeid
+  var orgServer = glome.config.server;
+  glome.config.server = "http://glome.proxy";
+
+  scope = nock(glome.config.server)
+                  .post(glome.config.url_login, {'user[glomeid]': glomeid })
+                  .replyWithFile(200, __dirname + '/login_success.json', {
+                      'X-CSRF-Token' : 'FptMcTnZAwN6ydH9RYr08Kn37bmrXzOvmNrG9Oy+tI8=',
+                      'Token' : '384be03b491fb88a64780c9388f2e0fc',
+                      'Token-exp' : 'Wed, 04 Mar 2015 10:26:53 -0000'
+                  });
+
+  glome.login(glomeid).then(function (result) {
+    t.equal(result.glomeId, glomeid, "glomeid match");
+    t.equal(result.x_csrf_token, 'FptMcTnZAwN6ydH9RYr08Kn37bmrXzOvmNrG9Oy+tI8=', "x_csrf_token match");
+    t.equal(result.auth_token, '384be03b491fb88a64780c9388f2e0fc', "auth_token match");
+    t.equal(result.auth_token_exp, 'Wed, 04 Mar 2015 10:26:53 -0000', "auth_token_exp match");
+
+    t.pass("Login with proxy should pass");
+    t.end();
+  }).catch(function (err) {
+    t.end("Login with proper proxy should not fail");
+  });
+
+  glome.config.server = orgServer;
+});
+
+test('Test create sync token', function(t) {
+  var glomeid = "1234";
+  var csrf = 'XSfCWjuUeGTnpceC+4bsuNG6la3wJMDPasinr6RzLyY='
+
+  scope = nock(glome.config.server)
+                  .post('/users/' + glomeid + '/sync.json')
+                  .matchHeader('X-CSRF-Token', csrf)
+                  .replyWithFile(201, __dirname + '/create_sync.json', {
+
+                  });
+
+  glome.createSync(glomeid, csrf).then(function (result) {
+    console.log(result);
+    t.equal(result.expires_at, "2015-03-02T12:31:37.804Z", "expires_at match");
+    t.equal(result.code, "994e27adb5b6", "code match");
+    t.end();
+
+  }).catch(function (err) {
+    console.log(err);
+    t.end("Create sync should not not fail");
+  });
+
 });

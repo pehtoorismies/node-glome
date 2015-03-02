@@ -11,56 +11,89 @@ var DEFAULTS = (function() {
   };
 })();
 
+// private functions
+function addHeaders(response, body) {
+  var gid,
+      x_csrf_token,
+      auth_token,
+      auth_token_exp;
+
+  try  {
+    gid = JSON.parse(body).glomeid;
+  } catch (error) {
+    console.error("Error parsing response");
+    return {};
+  }
+
+
+  if (typeof(response.getAllResponseHeaders) === 'function') {
+    x_csrf_token   = response.getResponseHeader('x-csrf-token');
+    auth_token     = response.getResponseHeader('token');
+    auth_token_exp = response.getResponseHeader('token-exp');
+
+  } else if (response.hasOwnProperty('headers')) {
+    x_csrf_token   = response.headers['x-csrf-token'];
+    auth_token     = response.headers['token'];
+    auth_token_exp = response.headers['token-exp'];
+  }
+
+  var result = { glomeId :gid };
+
+  if (x_csrf_token) {
+    result.x_csrf_token = x_csrf_token;
+  }
+  if (auth_token) {
+    result.auth_token = auth_token;
+  }
+  if (auth_token_exp) {
+    result.auth_token_exp = auth_token_exp;
+  }
+
+  return result;
+}
+
+// end private functions
+
+
 var request = require('request'),
     Promise = require('es6-promise').Promise,
     config = {
       "server"     : DEFAULTS.get('SERVER'),
       "url_create" : DEFAULTS.get('URL_CREATE'),
       "url_login"  : DEFAULTS.get('URL_LOGIN')
-    },
-    headers = {
-      //'User-Agent'  : 'Super Agent/0.0.1',
-      'content-type': 'application/json'
     };
 
-// Create id
-createId = function(appId) {
-  var url = config["server"].concat(config["url_create"]);
-  var form;
-  if (appId) {
-    form = { 'application[apikey]': appId['apiKey'],
-             'application[uid]': appId['uid'] };
-  }
+function glomeRequest(options) {
 
-
-
-  var options = {
-      url: url,
-      method: 'POST',
-      headers: headers,
-      form: form,
+  var opts = {
+      url: options.url,
+      method: options.method,
+      headers: options.headers,
+      form: options.form,
       withCredentials: false,
       verbose: false
   }
 
   return new Promise(function(resolve, reject) {
     request(options, function (error, response, body) {
-      if (!error && response.statusCode == 201) {
+      if (!error && response.statusCode == options.successStatusCode) {
         try {
-          var result = JSON.parse(body);
-          result.glomeid ? resolve(result.glomeid) : reject("Server error");
+          var result = options.parseResults(response, body);
+          result ? resolve(result) : reject("Server error");
 
         } catch (e) {
-          console.error("Malformed json:");
-          console.error(body);
+          console.error(e);
           reject("Server error ");
+
         }
       } else {
         reject(error);
       }
     });
   });
+
 }
+
 
 getIdFromStorage = function (webLocalStorage, storageId) {
   if (!webLocalStorage) {
@@ -80,53 +113,59 @@ saveIdToStorage = function (glomeid, webLocalStorage, storageId) {
   return webLocalStorage.getItem(key);
 }
 
-login = function(glomeid) {
-  // Configure the request
-  var url = config["server"].concat(config["url_login"]);
+// Create id
+createId = function(appId) {
+  var options = {};
 
-  var options = {
-      url: url,
-      method: 'POST',
-      headers: headers,
-      form: {'user[glomeid]': glomeid },
-      withCredentials: false,
-      verbose: false
+  options.url = config["server"].concat(config["url_create"]);
+
+  if (appId) {
+    options.form = { 'application[apikey]': appId['apiKey'],
+                     'application[uid]': appId['uid'] };
   }
-  return new Promise(function(resolve, reject) {
-    // Start the request
-    request(options, function (error, response, body) {
-      if (response && response.statusCode == 200) {
-        try {
-          if (typeof(response.getAllResponseHeaders) === 'function') {
-            console.log(response.getAllResponseHeaders());
-          } else if (response.hasOwnProperty('headers')) {
-            console.log(response.headers);
-          } else {
-            console.error("no response headers");
 
-          }
+  options.method = 'POST';
+  options.successStatusCode = 201;
+  options.parseResults = function(response, body) {
+    var result = JSON.parse(body);
+    return result.glomeid ? result : null;
+  };
+  return glomeRequest(options);
+}
 
-          
-          // console.log(response.headers['x-csrf-token']);
-          // console.log("headers[set-cookie]");
-          // console.log(response.headers['set-cookie']);
+login = function(glomeid) {
+  var options = {};
 
+  options.url = config["server"].concat(config["url_login"]);
+  options.method = 'POST';
+  options.form = {'user[glomeid]' : glomeid };
+  options.successStatusCode = 200;
 
-          // response.headers['X-CSRF-Token']
-          // Set-Cookie: _session_id=384be03b491fb88a64780c9388f2e0fc; path=/; expires=Wed, 04 Mar 2015 10:26:53 -0000; HttpOnly
-          // response.headers['Set-Cookie']
-          var result = JSON.parse(body);
-          result.glomeid ? resolve(result.glomeid) : reject("Server error");
-        } catch (e) {
-          console.error("Malformed json or error parsing headers:");
-          console.error(body);
-          reject("Server error ");
-        }
-      } else {
-        reject(body);
-      }
-    });
-  });
+  options.parseResults = function(response, body) {
+    result = addHeaders(response,body);
+    console.log("RESULT:::::::::");
+    console.log(result);
+    return result.glomeId ? result : null;
+
+  };
+  return glomeRequest(options);
+}
+
+createSync = function(glomeid, csrf) {
+  var options = {};
+
+  options.url = config["server"].concat('/users/',glomeid,'/sync.json');
+  options.method = 'POST';
+  options.headers = { 'X-CSRF-Token'  : csrf };
+
+  options.successStatusCode = 201;
+
+  options.parseResults = function(response, body) {
+    var result = JSON.parse(body);
+    console.log(result.code);
+    return result.code ? result : null;
+  };
+  return glomeRequest(options);
 }
 
 module.exports.createId = createId;
@@ -134,3 +173,4 @@ module.exports.login = login;
 module.exports.getIdFromStorage = getIdFromStorage;
 module.exports.saveIdToStorage = saveIdToStorage;
 module.exports.config = config;
+module.exports.createSync = createSync;
