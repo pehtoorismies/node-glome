@@ -28,13 +28,13 @@ function addHeaders(response, body) {
 
   if (typeof(response.getAllResponseHeaders) === 'function') {
     x_csrf_token   = response.getResponseHeader('x-csrf-token');
-    auth_token     = response.getResponseHeader('token');
-    auth_token_exp = response.getResponseHeader('token-exp');
+    auth_token     = response.getResponseHeader('x-token');
+    auth_token_exp = response.getResponseHeader('x-token-exp');
 
   } else if (response.hasOwnProperty('headers')) {
     x_csrf_token   = response.headers['x-csrf-token'];
-    auth_token     = response.headers['token'];
-    auth_token_exp = response.headers['token-exp'];
+    auth_token     = response.headers['x-token'];
+    auth_token_exp = response.headers['x-token-exp'];
   }
 
   var result = { glomeId :gid };
@@ -50,6 +50,10 @@ function addHeaders(response, body) {
   }
 
   return result;
+}
+
+function verifyGlomeId(glomeId) {
+  return glomeId && glomeId.length >= 5
 }
 
 // end private functions
@@ -82,18 +86,22 @@ function glomeRequest(options) {
           result ? resolve(result) : reject("Server error");
 
         } catch (e) {
-          console.error(e);
           reject("Server error ");
 
         }
       } else {
-        reject(error);
+        if (error) {
+          reject(error);
+        } else if (body) {
+          reject(body);
+        } else {
+          reject("unspecified error");
+        }
       }
     });
   });
 
 }
-
 
 getIdFromStorage = function (webLocalStorage, storageId) {
   if (!webLocalStorage) {
@@ -134,6 +142,10 @@ createId = function(appId) {
 }
 
 login = function(glomeid) {
+  if (!verifyGlomeId(glomeid)) {
+    return Promise.reject('Invalid Glome id "' + glomeid + '"');
+  }
+
   var options = {};
 
   options.url = config["server"].concat(config["url_login"]);
@@ -143,8 +155,6 @@ login = function(glomeid) {
 
   options.parseResults = function(response, body) {
     result = addHeaders(response,body);
-    console.log("RESULT:::::::::");
-    console.log(result);
     return result.glomeId ? result : null;
 
   };
@@ -152,9 +162,14 @@ login = function(glomeid) {
 }
 
 createSync = function(glomeid, csrf) {
+  if (!verifyGlomeId(glomeid)) {
+    return Promise.reject('Invalid Glome id "' + glomeid + '"');
+  }
+
   var options = {};
 
   options.url = config["server"].concat('/users/',glomeid,'/sync.json');
+  options.form = {'synchronization[kind]' : 'b' };
   options.method = 'POST';
   options.headers = { 'X-CSRF-Token'  : csrf };
 
@@ -162,9 +177,74 @@ createSync = function(glomeid, csrf) {
 
   options.parseResults = function(response, body) {
     var result = JSON.parse(body);
-    console.log(result.code);
     return result.code ? result : null;
   };
+  return glomeRequest(options);
+}
+
+pair = function(glomeid, pairCode, token, csrf) {
+  if (!verifyGlomeId(glomeid)) {
+    return Promise.reject('Invalid Glome id "' + glomeid + '"');
+  }
+
+  var options = {},
+      code    = {};
+
+  options.url = config["server"].concat('/users/',glomeid,'/sync/pair.json');
+  options.method = 'POST';
+  options.headers = { 'X-CSRF-Token'    : csrf,
+                      'X-Token'         : token };
+
+  if (!pairCode || pairCode.trim().length !== 12) {
+    return Promise.reject('Invalid code "' + pairCode + '"');
+  }
+
+  pairCode = pairCode.trim();
+
+  code['part_1'] = pairCode.slice(0, 4);
+  code['part_2'] = pairCode.slice(4, 8);
+  code['part_3'] = pairCode.slice(8, 12);
+
+  options.form = { 'pairing[code_1]': code['part_1'],
+                   'pairing[code_2]': code['part_2'],
+                   'pairing[code_3]': code['part_3']
+                 };
+  options.successStatusCode = 200;
+
+  options.parseResults = function(response, body) {
+    var result = JSON.parse(body);
+    return result.pair ? result : null;
+  };
+  return glomeRequest(options);
+}
+
+showPairs = function(glomeid) {
+  if (!verifyGlomeId(glomeid)) {
+    return Promise.reject('Invalid Glome id "' + glomeid + '"');
+  }
+
+  var options = {};
+
+  options.url = config["server"].concat('/users/', glomeid, '/services.json');
+  // something wrong with proxy... we have to give empty params.
+  //options.form = {};
+  options.method = 'GET';
+  //options.headers = { 'X-CSRF-Token'  : csrf };
+
+  options.successStatusCode = 200;
+
+  console.log("Show pairs")
+
+  options.parseResults = function(response, body) {
+    var result = JSON.parse(body);
+    if (!result) {
+      return null;
+    }
+    // HACK for now!!
+    var key = Object.keys(result)[0];
+    return result[key];
+  };
+
   return glomeRequest(options);
 }
 
@@ -174,3 +254,5 @@ module.exports.getIdFromStorage = getIdFromStorage;
 module.exports.saveIdToStorage = saveIdToStorage;
 module.exports.config = config;
 module.exports.createSync = createSync;
+module.exports.pair = pair
+module.exports.showPairs = showPairs
