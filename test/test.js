@@ -115,7 +115,6 @@ test("Create glomeid: No appKey, using proxy", function (t) {
 
 
   glome.createId().then(function (glomeId) {
-    console.log("GlomeID created: " + glomeId);
     t.ok(glomeId, "Glome id is ok");
     t.end()
 
@@ -217,7 +216,6 @@ test('Test create sync token', function(t) {
                   });
 
   glome.createSync(glomeid, csrf).then(function (result) {
-    console.log(result);
     t.equal(result.expires_at, "2015-03-02T12:31:37.804Z", "expires_at match");
     t.equal(result.code, "994e27adb5b6", "code match");
     t.end();
@@ -230,7 +228,7 @@ test('Test create sync token', function(t) {
 
 test('Test pair device incorrect code', function(t) {
   var glomeid = "12345";
-  var token = "4321";
+  var token = "432142123";
   var pairingCode = "12341234asdf"
   var csrf = 'XSfCWjuUeGTnpceC+4bsuNG6la3wJMDPasinr6RzLyY=';
 
@@ -250,7 +248,6 @@ test('Test pair device incorrect code', function(t) {
     t.end("Should catch incorrect pairing code");
   }).catch(function (err) {
     errObject = JSON.parse(err);
-    console.log(err);
     t.ok(errObject.code == 2201, "Correct code 2201 - wrong code");
     t.end();
   });
@@ -258,7 +255,7 @@ test('Test pair device incorrect code', function(t) {
 
 test('Test pair device code already used', function(t) {
   var glomeid = "12345";
-  var token = "4321";
+  var token = "43211234";
   var pairingCode = "12341234asdf"
   var csrf = 'XSfCWjuUeGTnpceC+4bsuNG6la3wJMDPasinr6RzLyY=';
 
@@ -278,16 +275,14 @@ test('Test pair device code already used', function(t) {
     t.end("Should catch incorrect pairing code");
   }).catch(function (err) {
     errObject = JSON.parse(err);
-    console.log(err);
     t.ok(errObject.code == 2202, "Correct code 2202 - wrong code");
     t.end();
   });
 });
 
-
 test('Test pair device', function(t) {
   var glomeid = "12345";
-  var token = "4321";
+  var token = "43211234";
   var pairingCode = "12341234asdf"
 
   var csrf = 'XSfCWjuUeGTnpceC+4bsuNG6la3wJMDPasinr6RzLyY=';
@@ -307,19 +302,17 @@ test('Test pair device', function(t) {
   glome.pair("", "123433", token, csrf).then(function (result) {
     t.end("Should catch incorrect glome id");
   }).catch(function (err) {
-    t.ok(err.toString().indexOf("Invalid Glome id") === 0, "Invalid glome id");
+    t.ok(err.toString().indexOf("Invalid glomeid") === 0, "Invalid glome id");
   });
 
 
   glome.pair(glomeid, "123433", token, csrf).then(function (result) {
     t.end("Should catch incorrect pair code");
   }).catch(function (err) {
-    console.log(err);
     t.ok(err.toString().indexOf("Invalid code") === 0, "Invalid code");
   });
 
   glome.pair(glomeid, "12341234asdf", token, csrf).then(function (result) {
-    console.log(result);
     t.ok(result.pair, "has pair");
     t.ok(result.pair.glomeid, "has glome id");
     t.end();
@@ -328,8 +321,6 @@ test('Test pair device', function(t) {
     t.end("Syncing should not not fail");
   });
 });
-
-
 
 test('List pairings', function(t){
   var glomeid = "123434s";
@@ -343,7 +334,7 @@ test('List pairings', function(t){
     t.end("Should catch incorrect glomeid while showing pairs");
   }).catch(function (err) {
     console.log(err);
-    t.ok(err.toString().indexOf("Invalid Glome") === 0, "Invalid glomeid");
+    t.ok(err.toString().indexOf("Invalid glomeid") === 0, "Invalid glomeid");
   });
   glome.showPairs(glomeid).then(function (result) {
     t.equal(result.instances.length, 3,"Has three pairs");
@@ -352,5 +343,68 @@ test('List pairings', function(t){
   }).catch(function (err) {
     console.log(err);
     t.end("Should not fail when showing pairs");
+  });
+});
+
+test('Save data', function(t) {
+  var glomeid = "123434";
+  var token = "1231234124";
+  var csrf = "12323423523423";
+  var data = {
+      content : "catflix",
+      subject_id      : 1,
+      kind    : "v"
+  }
+   var missingData = {
+      content : "catflix",
+  }
+
+  glome.sendData(glome, missingData, token, csrf).then(function (result) {
+    t.end("Should catch wrong user data");
+  }).catch(function (err) {
+    console.log(err);
+    t.ok(err.toString().indexOf("Invalid content") === 0, "Invalid data");
+  });
+  glome.sendData(glome, data, null, csrf).then(function (result) {
+    t.end("Should catch wrong user token");
+  }).catch(function (err) {
+    t.ok(err.toString().indexOf("Invalid token") === 0, "Invalid data");
+  });
+
+  scope = nock(glome.config.server)
+              .post('/users/' + glomeid + '/data.json')
+              .matchHeader('X-CSRF-Token', csrf)
+              .matchHeader('X-Token', token)
+              .replyWithFile(201, __dirname + '/data_success.json', {
+
+              });
+
+  glome.sendData(glomeid, data, token, csrf).then(function (result) {
+    t.equal(result.subject_id, 1, "The subject id");
+    t.end();
+  }).catch(function (err) {
+    console.log(err);
+    t.end("Should create user data");
+  });
+});
+
+test('Get data', function(t) {
+  var glomeid = "123412341234",
+      uid = "a1.glome.me",
+      btoa = require("btoa");
+
+  scope = nock(glome.config.server)
+              .get('/users/' + glomeid + '/data/YTEuZ2xvbWUubWU=.json')
+              .replyWithFile(200, __dirname + '/get_user_data.json', {
+
+              });
+
+  glome.getData(glomeid, uid, btoa).then(function (result) {
+    t.equal(result.subject_id,214456, "Subject_id");
+    t.equal(result.kind,"p", "Kind");
+    t.end();
+  }).catch(function (err) {
+    console.log(err)
+    t.end("Should get userdata");
   });
 });

@@ -24,6 +24,7 @@
     "url": "https://pehtoorismies@bitbucket.org/pehtoorismies/node-glome.git"
   },
   "devDependencies": {
+    "btoa": "^1.1.2",
     "nock": "^0.59.1",
     "node-localstorage": "^0.5.0",
     "tape": "^3.5.0"

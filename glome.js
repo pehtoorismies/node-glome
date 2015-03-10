@@ -1,4 +1,8 @@
 
+
+
+
+
 var DEFAULTS = (function() {
   var private = {
     'LOCALSTORAGE_KEY' : 'glomeidloc',
@@ -52,8 +56,30 @@ function addHeaders(response, body) {
   return result;
 }
 
-function verifyGlomeId(glomeId) {
-  return glomeId && glomeId.length >= 5
+function verifyNotEmpty(data) {
+  var retVal = {};
+
+  if (!data) {
+    retVal.pass = true;
+    return retVal;
+  }
+  var keys = Object.keys(data);
+  var errStr;
+  for (i = 0; i < keys.length; i++) {
+    var prop = data[keys[i]];
+    if (!prop || prop.length == 0) {
+      errStr = "Invalid " + keys[i] + " " + "'" + prop + "'";
+      retVal = {
+        pass : false,
+        reject : Promise.reject(errStr)
+      }
+      return retVal;
+    }
+
+  }
+
+  retVal.pass = true;
+  return retVal;
 }
 
 // end private functions
@@ -68,7 +94,6 @@ var request = require('request'),
     };
 
 function glomeRequest(options) {
-
   var opts = {
       url: options.url,
       method: options.method,
@@ -87,7 +112,6 @@ function glomeRequest(options) {
 
         } catch (e) {
           reject("Server error ");
-
         }
       } else {
         if (error) {
@@ -142,12 +166,13 @@ createId = function(appId) {
 }
 
 login = function(glomeid) {
-  if (!verifyGlomeId(glomeid)) {
-    return Promise.reject('Invalid Glome id "' + glomeid + '"');
+  var retVal = verifyNotEmpty({glomeid:glomeid});
+  if (!retVal.pass) {
+    // console.log(retVal.reject)
+    return retVal.reject;
   }
 
   var options = {};
-
   options.url = config["server"].concat(config["url_login"]);
   options.method = 'POST';
   options.form = {'user[glomeid]' : glomeid };
@@ -162,12 +187,12 @@ login = function(glomeid) {
 }
 
 createSync = function(glomeid, csrf) {
-  if (!verifyGlomeId(glomeid)) {
-    return Promise.reject('Invalid Glome id "' + glomeid + '"');
+  var retVal = verifyNotEmpty({glomeid:glomeid, csrf:csrf});
+  if (!retVal.pass) {
+    return retVal.reject;
   }
 
   var options = {};
-
   options.url = config["server"].concat('/users/',glomeid,'/sync.json');
   options.form = {'synchronization[kind]' : 'b' };
   options.method = 'POST';
@@ -183,13 +208,13 @@ createSync = function(glomeid, csrf) {
 }
 
 pair = function(glomeid, pairCode, token, csrf) {
-  if (!verifyGlomeId(glomeid)) {
-    return Promise.reject('Invalid Glome id "' + glomeid + '"');
+  var retVal = verifyNotEmpty({glomeid:glomeid, token:token, csrf:csrf});
+  if (!retVal.pass) {
+    return retVal.reject;
   }
 
   var options = {},
       code    = {};
-
   options.url = config["server"].concat('/users/',glomeid,'/sync/pair.json');
   options.method = 'POST';
   options.headers = { 'X-CSRF-Token'    : csrf,
@@ -219,10 +244,10 @@ pair = function(glomeid, pairCode, token, csrf) {
 }
 
 showPairs = function(glomeid) {
-  if (!verifyGlomeId(glomeid)) {
-    return Promise.reject('Invalid Glome id "' + glomeid + '"');
+  var retVal = verifyNotEmpty({glomeid:glomeid});
+  if (!retVal.pass) {
+    return retVal.reject;
   }
-
   var options = {};
 
   options.url = config["server"].concat('/users/', glomeid, '/services.json');
@@ -233,7 +258,7 @@ showPairs = function(glomeid) {
 
   options.successStatusCode = 200;
 
-  console.log("Show pairs")
+  // console.log("Show pairs")
 
   options.parseResults = function(response, body) {
     var result = JSON.parse(body);
@@ -248,6 +273,65 @@ showPairs = function(glomeid) {
   return glomeRequest(options);
 }
 
+sendData = function(glomeid, data, token, csrf) {
+  if (!data) {
+    return Promise.reject('Invalid data "' + data + '"')
+  }
+  var verifyList = {
+    glomeid:glomeid,
+    token:token,
+    csrf:csrf,
+    content : data.content,
+    content : data.subject_id,
+    content : data.kind
+  }
+
+  var retVal = verifyNotEmpty(verifyList);
+  if (!retVal.pass) {
+    return retVal.reject;
+  }
+
+  var options = {};
+  options.url = config["server"].concat('/users/', glomeid, '/data.json');
+  options.form = { 'userdata[content]': data.content,
+                   'userdata[subject_id]': data.subject_id,
+                   'userdata[kind]': data.kind
+                 };
+  options.headers = { 'X-CSRF-Token'    : csrf,
+                      'X-Token'         : token };
+  options.successStatusCode = 201;
+  options.method = 'POST';
+
+  options.parseResults = function(response, body) {
+    return JSON.parse(body);
+
+  };
+  return glomeRequest(options);
+
+}
+
+getData = function(glomeid, uid, btoaFunc) {
+  var retVal = verifyNotEmpty({glomeid:glomeid, uid:uid, btoaFunc: btoaFunc});
+  if (!retVal.pass) {
+    return retVal.reject;
+  }
+  var encoded = btoaFunc(uid);
+
+  // remove base64 at some point'
+  var options = {};
+  options.url = config["server"].concat('/users/', glomeid, '/data/' + encoded + '.json');
+  options.form = {per_page : 1, page : 1};
+  options.headers = {};
+  options.successStatusCode = 200;
+  options.method = 'GET';
+
+  options.parseResults = function(response, body) {
+    var result = JSON.parse(body);
+    return result.records[0];
+  };
+  return glomeRequest(options);
+}
+
 module.exports.createId = createId;
 module.exports.login = login;
 module.exports.getIdFromStorage = getIdFromStorage;
@@ -256,3 +340,5 @@ module.exports.config = config;
 module.exports.createSync = createSync;
 module.exports.pair = pair
 module.exports.showPairs = showPairs
+module.exports.sendData = sendData
+module.exports.getData = getData
