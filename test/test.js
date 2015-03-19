@@ -388,6 +388,28 @@ test('Save data', function(t) {
   });
 });
 
+test('Get empty data', function(t) {
+  var glomeid = "123412341234",
+      uid = "a1.glome.me",
+      btoa = require("btoa");
+
+  scope = nock(glome.config.server)
+              .get('/users/' + glomeid + '/data/YTEuZ2xvbWUubWU=.json')
+              .replyWithFile(200, __dirname + '/get_user_data_empty.json', {
+
+              });
+
+  glome.getData(glomeid, uid, btoa).then(function (result) {
+    console.log(result);
+    t.equal(result.subject_id,undefined, "Subject_id");
+    t.end();
+  }).catch(function (err) {
+    console.log(err)
+    t.end("Should get empty userdata");
+  });
+
+});
+
 test('Get data', function(t) {
   var glomeid = "123412341234",
       uid = "a1.glome.me",

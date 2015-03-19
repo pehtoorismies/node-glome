@@ -1,8 +1,3 @@
-
-
-
-
-
 var DEFAULTS = (function() {
   var private = {
     'LOCALSTORAGE_KEY' : 'glomeidloc',
@@ -327,7 +322,10 @@ getData = function(glomeid, uid, btoaFunc) {
 
   options.parseResults = function(response, body) {
     var result = JSON.parse(body);
-    return result.records[0];
+    if (!result.records) {
+      return null;
+    }
+    return result.records.length > 0 ? result.records[0] : result.records;
   };
   return glomeRequest(options);
 }
