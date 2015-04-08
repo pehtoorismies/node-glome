@@ -330,6 +330,26 @@ getData = function(glomeid, uid, btoaFunc) {
   return glomeRequest(options);
 }
 
+unpair = function (glomeid, syncid) {
+  var retVal = verifyNotEmpty({glomeid:glomeid, syncid:syncid});
+  if (!retVal.pass) {
+    return retVal.reject;
+  }
+  var options = {};
+  options.url = config["server"].concat('/users/', glomeid, '/sync/' + syncid + '/toggle.json');
+  console.log("Url " + options.url);
+  options.form = {};
+  options.headers = {};
+  options.successStatusCode = 200;
+  options.method = 'POST';
+
+  options.parseResults = function(response, body) {
+    var result = JSON.parse(body);
+    return result;
+  };
+  return glomeRequest(options);
+}
+
 module.exports.createId = createId;
 module.exports.login = login;
 module.exports.getIdFromStorage = getIdFromStorage;
@@ -340,3 +360,4 @@ module.exports.pair = pair
 module.exports.showPairs = showPairs
 module.exports.sendData = sendData
 module.exports.getData = getData
+module.exports.unpair = unpair
