@@ -255,8 +255,6 @@ showPairs = function(glomeid) {
 
   options.successStatusCode = 200;
 
-  // console.log("Show pairs")
-
   options.parseResults = function(response, body) {
     var result = JSON.parse(body);
     if (!result) {
