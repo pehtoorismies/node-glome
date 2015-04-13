@@ -245,9 +245,11 @@ showPairs = function(glomeid) {
   }
   var options = {};
 
-  options.url = config["server"].concat('/users/', glomeid, '/services.json');
-  // something wrong with proxy... we have to give empty params.
-  //options.form = {};
+  options.url = config["server"].concat('/users/', glomeid, '/sync.json');
+
+  options.form = { 'status' : 'used',
+                   'kind': 'b'
+                 };
   options.method = 'GET';
   //options.headers = { 'X-CSRF-Token'  : csrf };
 
@@ -260,9 +262,9 @@ showPairs = function(glomeid) {
     if (!result) {
       return null;
     }
-    // HACK for now!!
-    var key = Object.keys(result)[0];
-    return result[key];
+    console.log(result);
+
+    return result;
   };
 
   return glomeRequest(options);
@@ -330,25 +332,25 @@ getData = function(glomeid, uid, btoaFunc) {
   return glomeRequest(options);
 }
 
-unpair = function (glomeid, syncid) {
-  var retVal = verifyNotEmpty({glomeid:glomeid, syncid:syncid});
-  if (!retVal.pass) {
-    return retVal.reject;
-  }
-  var options = {};
-  options.url = config["server"].concat('/users/', glomeid, '/sync/' + syncid + '/toggle.json');
-  console.log("Url " + options.url);
-  options.form = {};
-  options.headers = {};
-  options.successStatusCode = 200;
-  options.method = 'POST';
+// unpair = function (glomeid, syncid) {
+//   var retVal = verifyNotEmpty({glomeid:glomeid, syncid:syncid});
+//   if (!retVal.pass) {
+//     return retVal.reject;
+//   }
+//   var options = {};
+//   options.url = config["server"].concat('/users/', glomeid, '/sync/' + syncid + '/toggle.json');
+//   console.log("Url " + options.url);
+//   options.form = {};
+//   options.headers = {};
+//   options.successStatusCode = 200;
+//   options.method = 'POST';
 
-  options.parseResults = function(response, body) {
-    var result = JSON.parse(body);
-    return result;
-  };
-  return glomeRequest(options);
-}
+//   options.parseResults = function(response, body) {
+//     var result = JSON.parse(body);
+//     return result;
+//   };
+//   return glomeRequest(options);
+// }
 
 module.exports.createId = createId;
 module.exports.login = login;
@@ -360,4 +362,4 @@ module.exports.pair = pair
 module.exports.showPairs = showPairs
 module.exports.sendData = sendData
 module.exports.getData = getData
-module.exports.unpair = unpair
+// module.exports.unpair = unpair
