@@ -433,20 +433,21 @@ test('Get data', function(t) {
   });
 });
 
-// test('Unpair', function(t) {
-//   var glomeid = "123412341234"
-//       syncid  = "12341234";
+test('Unpair', function(t) {
+  var glomeid = "123412341234"
+      syncid  = "12341234";
 
-//   scope = nock(glome.config.server)
-//               .post('/users/' + glomeid + '/sync/' + syncid + '/toggle.json')
-//               .replyWithFile(200, __dirname + '/unpair_success.json', {
+  scope = nock(glome.config.server)
+              .post('/users/' + glomeid + '/sync/' + syncid + '/toggle.json')
+              .replyWithFile(200, __dirname + '/unpair_success.json', {
 
-//               });
+              });
 
-//   glome.unpair(glomeid, syncid).then(function (result) {
-//     t.equal(result.id, 2, "Id");
-//     t.end();
-//   }).catch(function (err) {
-//     t.end("Unpair not should fail");
-//   });
-// });
+  glome.unpair(glomeid, syncid).then(function (result) {
+    t.equal(result.id, 1, "Unpair id equality");
+    t.equal(result.status, "used", "Unpair status equality");
+    t.end();
+  }).catch(function (err) {
+    t.end("Unpair not should fail");
+  });
+});
