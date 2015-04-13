@@ -260,7 +260,6 @@ showPairs = function(glomeid) {
     if (!result) {
       return null;
     }
-    console.log(result);
 
     return result;
   };
