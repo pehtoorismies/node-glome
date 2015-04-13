@@ -245,11 +245,11 @@ showPairs = function(glomeid) {
   }
   var options = {};
 
-  options.url = config["server"].concat('/users/', glomeid, '/sync.json');
+  options.url = config["server"]
+                .concat('/users/', glomeid, '/sync.json')
+                .concat('?status=used&kind=b')
 
-  options.form = { 'status' : 'used',
-                   'kind': 'b'
-                 };
+  // options.form = {};
   options.method = 'GET';
   //options.headers = { 'X-CSRF-Token'  : csrf };
 

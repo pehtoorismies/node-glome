@@ -325,10 +325,8 @@ test('Test pair device', function(t) {
 test('List unused brother pairings', function(t){
   var glomeid = "a_cb131e_00acd6e94b15b0b664ba0c261ea082682015030502198275162770";
   scope = nock(glome.config.server)
-              .get('/users/' + glomeid + '/sync.json')
+              .get('/users/' + glomeid + '/sync.json?status=used&kind=b')
               .replyWithFile(200, __dirname + '/pairs_success.json', {
-                'status' : 'used',
-                 'kind' : 'b'
               });
 
   glome.showPairs(null).then(function (result) {
